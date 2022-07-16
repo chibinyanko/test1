@@ -1,120 +1,39 @@
-<!DOCTYPE html><html><head><meta charset="UTF-8">
-    <title>Gray-Scott Reaction Diffusion System</title>		
-    <script src="three.min.js"></script>
-    <script type="x-shader/x-vertex" id="standardVertexShader">
-        varying vec2 vertUV;           
-        void main() {
-            vertUV = uv;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-    </script>
-    <script type="x-shader/x-fragment" id="gsFragmentShader">
-        varying vec2 vertUV;
-        uniform float screenWidth, screenHeight;
-        uniform vec2 brush;            
-        uniform sampler2D tSource;
-        uniform float Du, Dv, dt;
-        uniform float feed, kill;
-        float step_x = 1.0 / screenWidth;
-        float step_y = 1.0 / screenHeight;
-        void main() {
-            if (brush.x < -5.0) {
-                gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
-                return;
-            }               
-            vec2 uv   = texture2D(tSource, vertUV).rg;
-            vec2 uv_L = texture2D(tSource, vertUV + vec2(-step_x, 0.0)).rg;
-            vec2 uv_R = texture2D(tSource, vertUV + vec2( step_x, 0.0)).rg;
-            vec2 uv_D = texture2D(tSource, vertUV + vec2(0.0, -step_y)).rg;
-            vec2 uv_U = texture2D(tSource, vertUV + vec2(0.0,  step_y)).rg;               
-            vec2 lapl = (uv_L + uv_R + uv_D + uv_U - 4.0 * uv);
-            float du = Du * lapl.r - uv.r * uv.g * uv.g - feed * uv.r + feed;
-            float dv = Dv * lapl.g + uv.r * uv.g * uv.g - feed * uv.g - kill * uv.g;
-            vec2 nextUV = uv + dt * vec2(du, dv);
-            if (brush.x > 0.0) {
-                vec2 diff = (vertUV - brush) / vec2(step_x, step_y);
-                if (dot(diff, diff) < 5.0)
-                    nextUV.g = 0.9;
-            }                
-            gl_FragColor = vec4(nextUV.r, nextUV.g, 0.0, 1.0);
-        }
-    </script>       
-    <script>
-        var canvas;
-        var mRenderer;
-        var mScene;
-        var mCamera;
-        var mUniforms;
-        var mTexture1, mTexture2;
-        var mGSMaterial
-        var mScreenQuad;
-        var mToggled = false;
-        var mMinusOnes = new THREE.Vector2(-1, -1);
-        var Du   = 0.2097;
-        var Dv   = 0.105;
-        var feed = 0.037;
-        var kill = 0.06;
-        var init = function() {
-            canvas = document.getElementById('myCanvas');
-            mRenderer = new THREE.WebGLRenderer({canvas: canvas, preserveDrawingBuffer: true});
-            mScene  = new THREE.Scene();
-            mCamera = new THREE.OrthographicCamera(-0.5, 0.5, 0.5, -0.5, -10000, 10000);
-            mCamera.position.z = 100;
-            mScene.add(mCamera);          
-            mUniforms = {
-                screenWidth:  {type: "f", value: undefined},
-                screenHeight: {type: "f", value: undefined},
-                tSource:      {type: "t", value: undefined},
-                dt:           {type: "f", value: 1.0},
-                Du:           {type: "f", value: Du},
-                Dv:           {type: "f", value: Dv},
-                feed:         {type: "f", value: feed},
-                kill:         {type: "f", value: kill},
-                brush:        {type: "v2", value: new THREE.Vector2(-10, -10)},};
-            mGSMaterial = new THREE.ShaderMaterial({
-                    uniforms      : mUniforms,
-                    vertexShader  : document.getElementById('standardVertexShader').textContent,
-                    fragmentShader: document.getElementById('gsFragmentShader').textContent,});
-            var plane   = new THREE.PlaneGeometry(1.0, 1.0);
-            mScreenQuad = new THREE.Mesh(plane, mGSMaterial);
-            mScene.add(mScreenQuad);
-            resize(canvas.clientWidth, canvas.clientHeight);
-            render(0);
-            mUniforms.brush.value = new THREE.Vector2(0.5, 0.5);
-        }
-        var resize = function(width, height) {
-            canvas.width  = width;
-            canvas.height = height;
-            mRenderer.setSize(width, height);
-            mTexture1 = new THREE.WebGLRenderTarget(width / 2, height / 2,
-                {minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter,
-                format: THREE.RGBFormat, type: THREE.FloatType});
-            mTexture2 = new THREE.WebGLRenderTarget(width / 2, height / 2,
-                {minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter,
-                format: THREE.RGBFormat, type: THREE.FloatType}); 
-            mUniforms.screenWidth.value  = width  / 2;
-            mUniforms.screenHeight.value = height / 2;
-        }
-        var render = function(time) {   
-            for (var i = 0; i < 8; ++i) {
-                if (!mToggled) {
-                    mUniforms.tSource.value = mTexture1;
-                    mRenderer.render(mScene, mCamera, mTexture2, true);
-                    mUniforms.tSource.value = mTexture2;
-                } else {
-                    mUniforms.tSource.value = mTexture2;
-                    mRenderer.render(mScene, mCamera, mTexture1, true);
-                    mUniforms.tSource.value = mTexture1;
-                }                    
-                mToggled = !mToggled;
-                mUniforms.brush.value = mMinusOnes;
-            }
-            mRenderer.render(mScene, mCamera);
-            requestAnimationFrame(render);
-        }
-    </script>
-</head>
-<body onload=init()>
-    <canvas id="myCanvas" width="512" height="256"></canvas>
-</body>
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>My first three.js app</title>
+		<style>
+			body { margin: 0; }
+		</style>
+	</head>
+	<body>
+		<script src="js/three.js"></script>
+		<script>
+			const scene = new THREE.Scene();
+			const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+
+			const renderer = new THREE.WebGLRenderer();
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			document.body.appendChild( renderer.domElement );
+
+			const geometry = new THREE.BoxGeometry( 1, 1, 1 );
+			const material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
+			const cube = new THREE.Mesh( geometry, material );
+			scene.add( cube );
+
+			camera.position.z = 5;
+
+			function animate() {
+				requestAnimationFrame( animate );
+
+				cube.rotation.x += 0.01;
+				cube.rotation.y += 0.01;
+
+				renderer.render( scene, camera );
+			};
+
+			animate();
+		</script>
+	</body>
 </html>
